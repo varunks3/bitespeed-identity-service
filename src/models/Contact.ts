@@ -1,105 +1,129 @@
-import { DataTypes, Model, Optional } from 'sequelize';
-import sequelize from '../config/database';
+import { db } from '../config/database';
+import { Contact, ContactInput } from '../types';
 
-interface ContactAttributes {
-  id: number;
-  phoneNumber: string | null;
-  email: string | null;
-  linkedId: number | null;
-  linkPrecedence: 'primary' | 'secondary';
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-}
+export class ContactModel {
+  private static tableName = 'contacts';
 
-interface ContactCreationAttributes extends Optional<ContactAttributes, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+  /**
+   * Create a new contact
+   */
+  static async create(contactData: ContactInput): Promise<Contact> {
+    const [contact] = await db(this.tableName)
+      .insert({
+        phoneNumber: contactData.phoneNumber || null,
+        email: contactData.email || null,
+        linkedId: contactData.linkedId || null,
+        linkPrecedence: contactData.linkPrecedence,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning('*');
 
-class Contact extends Model<ContactAttributes, ContactCreationAttributes> implements ContactAttributes {
-  public id!: number;
-  public phoneNumber!: string | null;
-  public email!: string | null;
-  public linkedId!: number | null;
-  public linkPrecedence!: 'primary' | 'secondary';
-  public createdAt!: Date;
-  public updatedAt!: Date;
-  public deletedAt!: Date | null;
-
-  // Timestamps are automatically managed by Sequelize
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
-  public readonly deleted_at!: Date | null;
-}
-
-Contact.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    phoneNumber: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      validate: {
-        len: [1, 20],
-      },
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      validate: {
-        isEmail: true,
-      },
-    },
-    linkedId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'Contacts',
-        key: 'id',
-      },
-    },
-    linkPrecedence: {
-      type: DataTypes.ENUM('primary', 'secondary'),
-      allowNull: false,
-    },
-    createdAt: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW,
-    },
-    updatedAt: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW,
-    },
-    deletedAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-  },
-  {
-    sequelize,
-    tableName: 'Contacts',
-    timestamps: true,
-    paranoid: true, // Enables soft deletes
-    createdAt: 'createdAt',
-    updatedAt: 'updatedAt',
-    deletedAt: 'deletedAt',
+    return contact;
   }
-);
 
-// Self-referential association
-Contact.hasMany(Contact, {
-  as: 'SecondaryContacts',
-  foreignKey: 'linkedId',
-  sourceKey: 'id',
-});
+  /**
+   * Find contacts by email or phone number
+   */
+  static async findByEmailOrPhone(email?: string, phoneNumber?: string): Promise<Contact[]> {
+    let query = db(this.tableName)
+      .whereNull('deletedAt')
+      .orderBy('createdAt', 'asc');
 
-Contact.belongsTo(Contact, {
-  as: 'PrimaryContact',
-  foreignKey: 'linkedId',
-  targetKey: 'id',
-});
+    if (email && phoneNumber) {
+      query = query.where(function() {
+        this.where('email', email).orWhere('phoneNumber', phoneNumber);
+      });
+    } else if (email) {
+      query = query.where('email', email);
+    } else if (phoneNumber) {
+      query = query.where('phoneNumber', phoneNumber);
+    }
 
-export default Contact;
+    return await query;
+  }
+
+  /**
+   * Find contact by ID
+   */
+  static async findById(id: number): Promise<Contact | null> {
+    const contact = await db(this.tableName)
+      .where({ id, deletedAt: null })
+      .first();
+
+    return contact || null;
+  }
+
+  /**
+   * Find all contacts linked to a primary contact
+   */
+  static async findLinkedContacts(primaryContactId: number): Promise<Contact[]> {
+    return await db(this.tableName)
+      .where(function() {
+        this.where('id', primaryContactId).orWhere('linkedId', primaryContactId);
+      })
+      .whereNull('deletedAt')
+      .orderBy('createdAt', 'asc');
+  }
+
+  /**
+   * Update contact
+   */
+  static async update(id: number, updates: Partial<ContactInput>): Promise<Contact | null> {
+    const [contact] = await db(this.tableName)
+      .where({ id, deletedAt: null })
+      .update({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .returning('*');
+
+    return contact || null;
+  }
+
+  /**
+   * Soft delete contact
+   */
+  static async softDelete(id: number): Promise<boolean> {
+    const result = await db(this.tableName)
+      .where({ id })
+      .update({
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+    return result > 0;
+  }
+
+  /**
+   * Find primary contact among a list of contacts
+   */
+  static async findPrimaryContact(contacts: Contact[]): Promise<Contact | null> {
+    // First, check if any of the contacts is already primary
+    const primaryContact = contacts.find(contact => contact.linkPrecedence === 'primary');
+    if (primaryContact) {
+      return primaryContact;
+    }
+
+    // If no primary found, find the oldest contact and make it primary
+    const oldestContact = contacts[0]; // Already sorted by createdAt ASC
+    if (oldestContact) {
+      const updated = await this.update(oldestContact.id, { linkPrecedence: 'primary' });
+      return updated;
+    }
+
+    return null;
+  }
+
+  /**
+   * Update all secondary contacts of a primary to point to a new primary
+   */
+  static async updateSecondaryContacts(oldPrimaryId: number, newPrimaryId: number): Promise<void> {
+    await db(this.tableName)
+      .where({ linkedId: oldPrimaryId, deletedAt: null })
+      .update({
+        linkedId: newPrimaryId,
+        updatedAt: new Date(),
+      });
+  }
+}
