@@ -7,7 +7,7 @@ A web service for identifying and tracking customer identity across multiple pur
 - **Contact Identification**: Consolidate customer contacts based on email and phone number
 - **Primary/Secondary Linking**: Automatically link related contacts with primary/secondary precedence
 - **RESTful API**: Clean HTTP API with proper error handling
-- **Database Integration**: PostgreSQL with Sequelize ORM
+- **Database Integration**: PostgreSQL with Knex ORM
 - **TypeScript**: Full type safety and modern JavaScript features
 
 ## API Endpoints
@@ -64,7 +64,7 @@ Health check endpoint.
 
 3. **Database Setup**
    - Create a PostgreSQL database
-   - Run the migration script: `migrations/001_create_contacts_table.sql`
+   - Run migrations: `npm run migrate`
 
 4. **Start the Server**
    ```bash
@@ -78,7 +78,7 @@ Health check endpoint.
 
 ## Database Schema
 
-The `Contacts` table stores customer contact information:
+The `contacts` table stores customer contact information:
 
 ```sql
 {
