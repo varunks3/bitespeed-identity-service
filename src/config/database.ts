@@ -1,22 +1,9 @@
-import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
+import knex from 'knex';
+import knexConfig from '../../knexfile';
 
-dotenv.config();
+const environment = process.env.NODE_ENV || 'development';
+const config = knexConfig[environment as keyof typeof knexConfig];
 
-const sequelize = new Sequelize({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'bitespeed',
-  username: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'password',
-  dialect: 'postgres',
-  logging: process.env.NODE_ENV === 'development' ? console.log : false,
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000
-  }
-});
+export const db = knex(config);
 
-export default sequelize;
+export default db;
