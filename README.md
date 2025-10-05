@@ -120,6 +120,6 @@ npm run test:watch
 - `DB_NAME`: Database name (default: bitespeed)
 - `DB_USER`: Database username (default: postgres)
 - `DB_PASSWORD`: Database password (default: password)
-- `PORT`: Server port (default: 3000)
+- `PORT`: Server port (default: 8000)
 - `NODE_ENV`: Environment (development/production)
 - `LOG_LEVEL`: Logging level (default: info)

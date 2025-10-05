@@ -14,8 +14,8 @@ export class ContactModel {
         email: contactData.email || null,
         linkedId: contactData.linkedId || null,
         linkPrecedence: contactData.linkPrecedence,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        created_at: new Date(),
+        updated_at: new Date(),
       })
       .returning('*');
 
@@ -28,7 +28,7 @@ export class ContactModel {
   static async findByEmailOrPhone(email?: string, phoneNumber?: string): Promise<Contact[]> {
     let query = db(this.tableName)
       .whereNull('deletedAt')
-      .orderBy('createdAt', 'asc');
+      .orderBy('created_at', 'asc');
 
     if (email && phoneNumber) {
       query = query.where(function() {
@@ -63,7 +63,7 @@ export class ContactModel {
         this.where('id', primaryContactId).orWhere('linkedId', primaryContactId);
       })
       .whereNull('deletedAt')
-      .orderBy('createdAt', 'asc');
+      .orderBy('created_at', 'asc');
   }
 
   /**
@@ -74,7 +74,7 @@ export class ContactModel {
       .where({ id, deletedAt: null })
       .update({
         ...updates,
-        updatedAt: new Date(),
+        updated_at: new Date(),
       })
       .returning('*');
 
@@ -89,7 +89,7 @@ export class ContactModel {
       .where({ id })
       .update({
         deletedAt: new Date(),
-        updatedAt: new Date(),
+        updated_at: new Date(),
       });
 
     return result > 0;
@@ -123,7 +123,7 @@ export class ContactModel {
       .where({ linkedId: oldPrimaryId, deletedAt: null })
       .update({
         linkedId: newPrimaryId,
-        updatedAt: new Date(),
+        updated_at: new Date(),
       });
   }
 }

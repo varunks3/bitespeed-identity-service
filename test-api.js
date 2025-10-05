@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:8000';
 
 async function testAPI() {
   console.log('🧪 Testing Bitespeed Identity Service API\n');
