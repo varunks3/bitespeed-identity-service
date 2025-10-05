@@ -63,8 +63,8 @@ export class ContactService {
     phoneNumber?: string
   ): boolean {
     // Check if the new data is different from primary contact
-    const hasNewEmail = email && email !== primaryContact.email;
-    const hasNewPhone = phoneNumber && phoneNumber !== primaryContact.phoneNumber;
+    const hasNewEmail = Boolean(email && email !== primaryContact.email);
+    const hasNewPhone = Boolean(phoneNumber && phoneNumber !== primaryContact.phoneNumber);
 
     return hasNewEmail || hasNewPhone;
   }

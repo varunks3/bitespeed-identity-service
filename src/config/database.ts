@@ -1,8 +1,9 @@
 import knex from 'knex';
-import knexConfig from '../../knexfile';
+import type { Knex } from 'knex';
+const knexConfig = require('../../knexfile');
 
 const environment = process.env.NODE_ENV || 'development';
-const config = knexConfig[environment as keyof typeof knexConfig];
+const config: Knex.Config = knexConfig[environment as keyof typeof knexConfig];
 
 export const db = knex(config);
 

@@ -1,0 +1,5 @@
+# Docker Hub Configuration
+# Replace 'your-username' with your actual Docker Hub username
+DOCKER_HUB_USERNAME=varunks3
+DOCKER_HUB_REPOSITORY=bitespeed-identity-service
+DOCKER_HUB_TAG=latest

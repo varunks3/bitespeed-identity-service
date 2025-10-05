@@ -24,8 +24,8 @@ export interface IdentifyResponse {
 }
 
 export interface ContactInput {
-  phoneNumber?: string;
-  email?: string;
-  linkedId?: number;
+  phoneNumber?: string | null;
+  email?: string | null;
+  linkedId?: number | null;
   linkPrecedence: 'primary' | 'secondary';
 }
