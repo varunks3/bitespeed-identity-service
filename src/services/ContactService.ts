@@ -1,5 +1,4 @@
-import { Op } from 'sequelize';
-import Contact from '../models/Contact';
+import { ContactModel } from '../models/Contact';
 import { IdentifyRequest, IdentifyResponse, ContactInput } from '../types';
 
 export class ContactService {
@@ -15,16 +14,23 @@ export class ContactService {
     }
 
     // Find existing contacts that match either email or phoneNumber
-    const existingContacts = await this.findMatchingContacts(email, phoneNumber);
+    const existingContacts = await ContactModel.findByEmailOrPhone(email, phoneNumber);
 
     if (existingContacts.length === 0) {
       // No existing contacts found, create a new primary contact
-      const newContact = await this.createPrimaryContact(email, phoneNumber);
+      const newContact = await ContactModel.create({
+        email: email || null,
+        phoneNumber: phoneNumber || null,
+        linkPrecedence: 'primary',
+      });
       return this.buildResponse([newContact]);
     }
 
     // Find the primary contact among existing contacts
-    const primaryContact = await this.findPrimaryContact(existingContacts);
+    const primaryContact = await ContactModel.findPrimaryContact(existingContacts);
+    if (!primaryContact) {
+      throw new Error('Failed to find or create primary contact');
+    }
     
     // Check if we need to create a secondary contact
     const needsSecondaryContact = this.shouldCreateSecondaryContact(
@@ -34,61 +40,25 @@ export class ContactService {
     );
 
     if (needsSecondaryContact) {
-      await this.createSecondaryContact(primaryContact.id, email, phoneNumber);
+      await ContactModel.create({
+        email: email || null,
+        phoneNumber: phoneNumber || null,
+        linkedId: primaryContact.id,
+        linkPrecedence: 'secondary',
+      });
     }
 
     // Get all contacts linked to the primary contact
-    const allLinkedContacts = await this.getAllLinkedContacts(primaryContact.id);
+    const allLinkedContacts = await ContactModel.findLinkedContacts(primaryContact.id);
     
     return this.buildResponse(allLinkedContacts);
-  }
-
-  /**
-   * Find contacts that match the provided email or phoneNumber
-   */
-  private async findMatchingContacts(email?: string, phoneNumber?: string): Promise<Contact[]> {
-    const whereConditions: any = {
-      deletedAt: null,
-    };
-
-    if (email && phoneNumber) {
-      whereConditions[Op.or] = [
-        { email },
-        { phoneNumber },
-      ];
-    } else if (email) {
-      whereConditions.email = email;
-    } else if (phoneNumber) {
-      whereConditions.phoneNumber = phoneNumber;
-    }
-
-    return await Contact.findAll({
-      where: whereConditions,
-      order: [['createdAt', 'ASC']],
-    });
-  }
-
-  /**
-   * Find the primary contact among a list of contacts
-   */
-  private async findPrimaryContact(contacts: Contact[]): Promise<Contact> {
-    // First, check if any of the contacts is already primary
-    const primaryContact = contacts.find(contact => contact.linkPrecedence === 'primary');
-    if (primaryContact) {
-      return primaryContact;
-    }
-
-    // If no primary found, find the oldest contact and make it primary
-    const oldestContact = contacts[0]; // Already sorted by createdAt ASC
-    await oldestContact.update({ linkPrecedence: 'primary' });
-    return oldestContact;
   }
 
   /**
    * Check if we need to create a secondary contact
    */
   private shouldCreateSecondaryContact(
-    primaryContact: Contact,
+    primaryContact: any,
     email?: string,
     phoneNumber?: string
   ): boolean {
@@ -100,56 +70,9 @@ export class ContactService {
   }
 
   /**
-   * Create a new primary contact
-   */
-  private async createPrimaryContact(email?: string, phoneNumber?: string): Promise<Contact> {
-    const contactData: ContactInput = {
-      email: email || null,
-      phoneNumber: phoneNumber || null,
-      linkPrecedence: 'primary',
-    };
-
-    return await Contact.create(contactData);
-  }
-
-  /**
-   * Create a secondary contact linked to the primary contact
-   */
-  private async createSecondaryContact(
-    primaryContactId: number,
-    email?: string,
-    phoneNumber?: string
-  ): Promise<Contact> {
-    const contactData: ContactInput = {
-      email: email || null,
-      phoneNumber: phoneNumber || null,
-      linkedId: primaryContactId,
-      linkPrecedence: 'secondary',
-    };
-
-    return await Contact.create(contactData);
-  }
-
-  /**
-   * Get all contacts linked to a primary contact
-   */
-  private async getAllLinkedContacts(primaryContactId: number): Promise<Contact[]> {
-    return await Contact.findAll({
-      where: {
-        [Op.or]: [
-          { id: primaryContactId },
-          { linkedId: primaryContactId },
-        ],
-        deletedAt: null,
-      },
-      order: [['createdAt', 'ASC']],
-    });
-  }
-
-  /**
    * Build the response object
    */
-  private buildResponse(contacts: Contact[]): IdentifyResponse {
+  private buildResponse(contacts: any[]): IdentifyResponse {
     const primaryContact = contacts.find(contact => contact.linkPrecedence === 'primary')!;
     const secondaryContacts = contacts.filter(contact => contact.linkPrecedence === 'secondary');
 
@@ -180,22 +103,14 @@ export class ContactService {
   /**
    * Handle the case where two primary contacts need to be merged
    */
-  async mergePrimaryContacts(olderPrimary: Contact, newerPrimary: Contact): Promise<void> {
+  async mergePrimaryContacts(olderPrimary: any, newerPrimary: any): Promise<void> {
     // Update the newer primary to be secondary
-    await newerPrimary.update({
+    await ContactModel.update(newerPrimary.id, {
       linkPrecedence: 'secondary',
       linkedId: olderPrimary.id,
     });
 
     // Update all secondary contacts of the newer primary to point to the older primary
-    await Contact.update(
-      { linkedId: olderPrimary.id },
-      {
-        where: {
-          linkedId: newerPrimary.id,
-          deletedAt: null,
-        },
-      }
-    );
+    await ContactModel.updateSecondaryContacts(newerPrimary.id, olderPrimary.id);
   }
 }
