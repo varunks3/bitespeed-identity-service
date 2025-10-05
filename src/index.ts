@@ -1,18 +1,17 @@
 import app from './app';
-import sequelize from './config/database';
-import Contact from './models/Contact';
+import { db } from './config/database';
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
 async function startServer() {
   try {
     // Test database connection
-    await sequelize.authenticate();
+    await db.raw('SELECT 1');
     console.log('✅ Database connection established successfully');
 
-    // Sync database models (create tables if they don't exist)
-    await sequelize.sync({ alter: true });
-    console.log('✅ Database models synchronized');
+    // Run migrations
+    // await db.migrate.latest();
+    // console.log('✅ Database migrations completed');
 
     // Start the server
     app.listen(PORT, () => {
@@ -29,13 +28,13 @@ async function startServer() {
 // Handle graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n🛑 Received SIGINT, shutting down gracefully...');
-  await sequelize.close();
+  await db.destroy();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
-  await sequelize.close();
+  await db.destroy();
   process.exit(0);
 });
 

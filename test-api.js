@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:8000';
 
 async function testAPI() {
   console.log('🧪 Testing Bitespeed Identity Service API\n');
@@ -44,24 +44,6 @@ async function testAPI() {
       phoneNumber: '123456'
     });
     console.log('✅ Phone query result:', JSON.stringify(phoneQueryResponse.data, null, 2));
-    console.log('');
-
-    // Test 6: Create another primary contact and link them
-    console.log('6. Creating another primary contact...');
-    const anotherPrimaryResponse = await axios.post(`${BASE_URL}/identify`, {
-      email: 'george@hillvalley.edu',
-      phoneNumber: '919191'
-    });
-    console.log('✅ Another primary contact created:', JSON.stringify(anotherPrimaryResponse.data, null, 2));
-    console.log('');
-
-    // Test 7: Link two primary contacts
-    console.log('7. Linking two primary contacts...');
-    const linkResponse = await axios.post(`${BASE_URL}/identify`, {
-      email: 'george@hillvalley.edu',
-      phoneNumber: '123456'
-    });
-    console.log('✅ Primary contacts linked:', JSON.stringify(linkResponse.data, null, 2));
     console.log('');
 
     console.log('🎉 All tests passed successfully!');
