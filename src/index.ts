@@ -10,8 +10,8 @@ async function startServer() {
     console.log('✅ Database connection established successfully');
 
     // Run migrations
-    await db.migrate.latest();
-    console.log('✅ Database migrations completed');
+    // await db.migrate.latest();
+    // console.log('✅ Database migrations completed');
 
     // Start the server
     app.listen(PORT, () => {

@@ -29,19 +29,16 @@ if ! docker info | grep -q "Username:"; then
     read -p "Press Enter after logging in..."
 fi
 
-# Build the image
-echo "🔨 Building Docker image..."
-docker-compose build app
-
-# Tag the image
-echo "🏷️  Tagging image..."
-docker tag bitespeed-app:latest $USERNAME/$REPOSITORY:$VERSION
-docker tag bitespeed-app:latest $USERNAME/$REPOSITORY:latest
-
-# Push to Docker Hub
-echo "📤 Pushing to Docker Hub..."
-docker push $USERNAME/$REPOSITORY:$VERSION
-docker push $USERNAME/$REPOSITORY:latest
+# Build and push multi-arch (linux/amd64) image using Buildx
+echo "🔨 Building and pushing linux/amd64 image with Buildx..."
+export DOCKER_BUILDKIT=1
+docker buildx create --use --name bitespeed-builder >/dev/null 2>&1 || docker buildx use bitespeed-builder
+docker buildx build \
+  --platform linux/amd64 \
+  -t $USERNAME/$REPOSITORY:$VERSION \
+  -t $USERNAME/$REPOSITORY:latest \
+  --push \
+  .
 
 echo ""
 echo "✅ Successfully deployed to Docker Hub!"

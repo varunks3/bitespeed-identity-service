@@ -1,30 +1,14 @@
 services:
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_DB=bitespeed
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-
   app:
-    image: your-username/bitespeed-identity-service:latest
+    image: varunks3/bitespeed-identity-service:latest
     ports:
       - "8000:8000"
     environment:
       - NODE_ENV=production
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=bitespeed
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-    depends_on:
-      - postgres
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_SSL=${DB_SSL}
     restart: unless-stopped
-
-volumes:
-  postgres_data:
