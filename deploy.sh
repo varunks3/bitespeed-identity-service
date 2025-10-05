@@ -7,7 +7,7 @@ set -e
 
 # Default values
 VERSION=${1:-latest}
-USERNAME=${2:-your-username}
+USERNAME=${2:-varunks3}
 REPOSITORY="bitespeed-identity-service"
 
 echo "🐳 Deploying to Docker Hub..."
@@ -35,8 +35,8 @@ docker-compose build app
 
 # Tag the image
 echo "🏷️  Tagging image..."
-docker tag bitespeed-identity-service-app:latest $USERNAME/$REPOSITORY:$VERSION
-docker tag bitespeed-identity-service-app:latest $USERNAME/$REPOSITORY:latest
+docker tag bitespeed-app:latest $USERNAME/$REPOSITORY:$VERSION
+docker tag bitespeed-app:latest $USERNAME/$REPOSITORY:latest
 
 # Push to Docker Hub
 echo "📤 Pushing to Docker Hub..."
